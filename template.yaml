@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Monitor AWS costs for Project Blue.
+
+Globals:
+  Function:
+    Timeout: 6
+
+Resources:
+  ProjectBlueCostsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_costs/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Policies: 
+        - Statement:
+          - Sid: GetCostAndUsage
+            Effect: Allow
+            Action:
+            - ce:GetCostAndUsage
+            Resource: '*'
+      Events:
+        RecurrenceEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(* 7 ? * MON *) # Every Mon at 7:00 AM
+            Enabled: True 
+
+Outputs:
+  Function:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt ProjectBlueCostsFunction.Arn
+  FunctionIamRole:
+    Description: "Implicit IAM Role created for ProjectBlueCosts function"
+    Value: !GetAtt ProjectBlueCostsFunctionRole.Arn
+  
