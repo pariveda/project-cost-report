@@ -1,13 +1,13 @@
+import datetime as dt
 import os
 
 import boto3
 import pandas as pd
 import requests
+from dateutil.relativedelta import relativedelta
 
-
-def main():
-    print(get_cost_report())
-
+CENTRAL_COL_HEADER = 'Central'
+TENANTS_COL_HEADER = 'Tenants'
 
 def post_to_slack(report: str):
     webhook_url = os.environ['SLACK_WEBHOOK_URL']
@@ -16,10 +16,14 @@ def post_to_slack(report: str):
 
 
 def get_cost_report(tenants_role, region='us-east-1'):
+    today = dt.datetime.today()
+    monthly_start_date = (today - relativedelta(months=4)).replace(day=1).date().isoformat()
+    weekly_start_date = (today - relativedelta(weeks=5)).replace(day=1).date().isoformat()
+    
     monthly_params = dict(
         TimePeriod={
-            'Start': '2021-10-01',
-            'End': '2022-02-01'
+            'Start': monthly_start_date,
+            'End': today.date().isoformat()
         },
         Granularity='MONTHLY',
         Metrics=[
@@ -29,8 +33,8 @@ def get_cost_report(tenants_role, region='us-east-1'):
 
     weekly_params = dict(
         TimePeriod={
-            'Start': '2022-01-01',
-            'End': '2022-02-01'
+            'Start': weekly_start_date,
+            'End': today.date().isoformat()
         },
         Granularity='DAILY',
         Metrics=[
@@ -39,17 +43,22 @@ def get_cost_report(tenants_role, region='us-east-1'):
     )
 
     report = f"""
-# Monthly Costs #
+
+*Rolling 5 Months*
+```
 {get_cost_table(monthly_params, tenants_role, region)}
-# Weekly Costs #
+```
+
+*Rolling 6 Weeks*
+```
 {get_cost_table(weekly_params, tenants_role, region)}
+```
     """
 
     return report
 
 
 def get_cost_table(params: dict, tenants_role, region) -> pd.DataFrame:
-    assumed_creds = None
     sts_client = boto3.client('sts')
     assumed_creds = sts_client.assume_role(
         RoleArn=tenants_role,
@@ -68,8 +77,8 @@ def get_cost_table(params: dict, tenants_role, region) -> pd.DataFrame:
     tenants_costs = pb_tenants_client.get_cost_and_usage(
         **params)['ResultsByTime']
 
-    df_central = pd.DataFrame(flatten('PB Central', central_costs))
-    df_tenants = pd.DataFrame(flatten('PB Tenants', tenants_costs))
+    df_central = pd.DataFrame(flatten(CENTRAL_COL_HEADER, central_costs))
+    df_tenants = pd.DataFrame(flatten(TENANTS_COL_HEADER, tenants_costs))
 
     df_combined = df_central.merge(
         df_tenants,
@@ -79,9 +88,9 @@ def get_cost_table(params: dict, tenants_role, region) -> pd.DataFrame:
     if params['Granularity'] == 'DAILY':
         df_combined = df_combined.resample('W', label='left').sum()
 
-    df_combined['PB Central ($)'] = df_combined['PB Central ($)'].apply(
+    df_combined[CENTRAL_COL_HEADER] = df_combined[CENTRAL_COL_HEADER].apply(
         lambda x: "${:>5,}".format(int(x)))
-    df_combined['PB Tenants ($)'] = df_combined['PB Tenants ($)'].apply(
+    df_combined[TENANTS_COL_HEADER] = df_combined[TENANTS_COL_HEADER].apply(
         lambda x: "${:>5,}".format(int(x)))
 
     return df_combined
@@ -90,11 +99,8 @@ def get_cost_table(params: dict, tenants_role, region) -> pd.DataFrame:
 def flatten(name: str, results: pd.DataFrame) -> pd.DataFrame:
     flattened = pd.DataFrame(map(lambda x: {
         'StartDate': x['TimePeriod']['Start'],
-        f'{name} ($)': float(x['Total']['AmortizedCost']['Amount'])
+        f'{name}': float(x['Total']['AmortizedCost']['Amount'])
     }, results))
     flattened['StartDate'] = pd.to_datetime(flattened['StartDate'])
     return flattened
 
-
-if __name__ == '__main__':
-    main()
