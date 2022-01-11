@@ -17,8 +17,8 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.8
       Timeout: 15
-      Layers:
-        - !Ref PipDependenciesLayer
+      # Layers:
+      #   - !Ref PipDependenciesLayer
       Policies:
         - Statement:
             - Sid: GetCostAndUsage
@@ -48,12 +48,12 @@ Resources:
             Schedule: cron(* 7 ? * MON *) # Every Mon at 7:00 AM
             Enabled: True
 
-  PipDependenciesLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      ContentUri: .aws-sam/deps
-      CompatibleRuntimes:
-        - python3.8
+  # PipDependenciesLayer:
+  #   Type: AWS::Serverless::LayerVersion
+  #   Properties:
+  #     ContentUri: .aws-sam/deps
+  #     CompatibleRuntimes:
+  #       - python3.8
 
   SnsTopic:
     Type: AWS::SNS::Topic
