@@ -6,6 +6,8 @@ Parameters:
   TenantsRoleArn:
     Type: String
     Description: ARN for role to Get Cost and Usage from Tenants account.
+  SlackWebhookUrl:
+    Type: String
 
 Resources:
   ProjectBlueCostsFunction:
@@ -15,6 +17,8 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.8
       Timeout: 15
+      Layers:
+        - !Ref PipDependenciesLayer
       Policies:
         - Statement:
             - Sid: GetCostAndUsage
@@ -22,21 +26,63 @@ Resources:
               Action:
                 - ce:GetCostAndUsage
               Resource: "*"
-        - Statement:
             - Sid: AssumeTenantsRole
               Effect: Allow
               Action:
                 - sts:AssumeRole
               Resource: !Ref TenantsRoleArn
+            - Sid: PublishEvent
+              Effect: Allow
+              Action: events:PutEvents
+              Resource: arn:aws:events:us-west-2:405338390729:event-bus/default
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SnsTopic.TopicName
       Environment:
         Variables:
           TENANTS_ROLE_ARN: !Ref TenantsRoleArn
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
       Events:
         RecurrenceEvent:
           Type: Schedule
           Properties:
             Schedule: cron(* 7 ? * MON *) # Every Mon at 7:00 AM
             Enabled: True
+
+  PipDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: .aws-sam/deps
+      CompatibleRuntimes:
+        - python3.8
+
+  SnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Project Blue Cost Report
+      Subscription:
+        - Endpoint: https://global.sns-api.chatbot.amazonaws.com
+          Protocol: https
+      TopicName: pb-cost-report
+
+  SlackIntegration:
+    Type: AWS::Chatbot::SlackChannelConfiguration
+    Properties:
+      ConfigurationName: pb-cost-report
+      IamRoleArn: arn:aws:iam::405338390729:role/service-role/AWSChatbotSlackIntegrationRole
+      LoggingLevel: ERROR
+      SlackChannelId: C02T8APJA94 # zz_test
+      SlackWorkspaceId: T024F3C1G # Pariveda
+      SnsTopicArns:
+        - !Ref SnsTopic
+
+  LambdaSnsDestination:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref ProjectBlueCostsFunction
+      Qualifier: "$LATEST"
+      DestinationConfig:
+        OnSuccess:
+          Destination: !Ref SnsTopic
 
 Outputs:
   Function:

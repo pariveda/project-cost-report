@@ -1,6 +1,6 @@
-from project_blue_costs import get_cost_report
-import sys
 import os
+
+from project_blue_costs import get_cost_report
 
 
 def lambda_handler(event, context):

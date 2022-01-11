@@ -1,9 +1,18 @@
+import os
+
 import boto3
 import pandas as pd
+import requests
 
 
 def main():
     print(get_cost_report())
+
+
+def post_to_slack(report: str):
+    webhook_url = os.environ['SLACK_WEBHOOK_URL']
+    data = { 'text': report }
+    requests.post(webhook_url, json=data)
 
 
 def get_cost_report(tenants_role, region='us-east-1'):
