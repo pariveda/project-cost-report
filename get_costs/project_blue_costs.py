@@ -6,7 +6,7 @@ def main():
     print(get_cost_report())
 
 
-def get_cost_report():
+def get_cost_report(tenants_role, region='us-east-1'):
     monthly_params = dict(
         TimePeriod={
             'Start': '2021-10-01',
@@ -31,17 +31,28 @@ def get_cost_report():
 
     report = f"""
 # Monthly Costs #
-{get_cost_table(monthly_params)}
+{get_cost_table(monthly_params, tenants_role, region)}
 # Weekly Costs #
-{get_cost_table(weekly_params)}
+{get_cost_table(weekly_params, tenants_role, region)}
     """
 
     return report
 
 
-def get_cost_table(params) -> pd.DataFrame:
-    pb_central_client = boto3.client('ce', region_name='us-west-2')
-    pb_tenants_client = boto3.client('ce', region_name='us-west-2')
+def get_cost_table(params: dict, tenants_role, region) -> pd.DataFrame:
+    assumed_creds = None
+    sts_client = boto3.client('sts')
+    assumed_creds = sts_client.assume_role(
+        RoleArn=tenants_role,
+        RoleSessionName='GetProjectBlueCosts'
+    )['Credentials']
+
+    pb_central_client = boto3.client('ce', region_name=region)
+    pb_tenants_client = boto3.client(
+        'ce', region_name=region,
+        aws_access_key_id=assumed_creds['AccessKeyId'],
+        aws_secret_access_key=assumed_creds['SecretAccessKey'],
+        aws_session_token=assumed_creds['SessionToken'])
 
     central_costs = pb_central_client.get_cost_and_usage(
         **params)['ResultsByTime']

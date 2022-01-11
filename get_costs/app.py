@@ -1,16 +1,17 @@
 from project_blue_costs import get_cost_report
 import sys
+import os
+
 
 def lambda_handler(event, context):
-    try:
-        cost_report = get_cost_report()
-        return {
-            "statusCode": 200,
-            "body": cost_report
-        }
-    except:
-        raise Exception('Unable to retrieve cost report.\n {} \n {}'.format(
-            str(sys.exc_info()[0]), str(sys.exc_info()[1])))
+    tenants_role_arn = os.environ['TENANTS_ROLE_ARN']
+    print('TENANTS_ROLE_ARN:', tenants_role_arn)
+    cost_report = get_cost_report(tenants_role_arn, region='us-west-2')
+    return {
+        "statusCode": 200,
+        "body": cost_report
+    }
+
 
 if __name__ == '__main__':
     lambda_handler(None, None)
