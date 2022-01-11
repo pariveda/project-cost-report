@@ -64,17 +64,6 @@ Resources:
           Protocol: https
       TopicName: pb-cost-report
 
-  SlackIntegration:
-    Type: AWS::Chatbot::SlackChannelConfiguration
-    Properties:
-      ConfigurationName: pb-cost-report
-      IamRoleArn: arn:aws:iam::405338390729:role/service-role/AWSChatbotSlackIntegrationRole
-      LoggingLevel: ERROR
-      SlackChannelId: C02T8APJA94 # zz_test
-      SlackWorkspaceId: T024F3C1G # Pariveda
-      SnsTopicArns:
-        - !Ref SnsTopic
-
   LambdaSnsDestination:
     Type: AWS::Lambda::EventInvokeConfig
     Properties:
