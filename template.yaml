@@ -8,15 +8,16 @@ Parameters:
     Description: ARN for role to Get Cost and Usage from Tenants account.
   SlackWebhookUrl:
     Type: String
+    Description: Incoming webhook for Slack channel to publish report to.
 
 Resources:
-  ProjectBlueCostsFunction:
+  ProjectCostsFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: get_costs/
       Handler: app.lambda_handler
       Runtime: python3.8
-      Timeout: 15
+      Timeout: 20 # CostExplorer query can run long sometimes.
       # Layers:
       #   - !Ref PipDependenciesLayer
       Policies:
@@ -45,7 +46,7 @@ Resources:
         RecurrenceEvent:
           Type: Schedule
           Properties:
-            Schedule: cron(* 7 ? * MON *) # Every Mon at 7:00 AM
+            Schedule: cron(0 13 ? * MON *) # Every Mon at 7:00 AM
             Enabled: True
 
   # PipDependenciesLayer:
@@ -62,21 +63,27 @@ Resources:
       Subscription:
         - Endpoint: https://global.sns-api.chatbot.amazonaws.com
           Protocol: https
-      TopicName: pb-cost-report
+      TopicName: !Ref AWS::StackName
 
   LambdaSnsDestination:
     Type: AWS::Lambda::EventInvokeConfig
     Properties:
-      FunctionName: !Ref ProjectBlueCostsFunction
+      FunctionName: !Ref ProjectCostsFunction
       Qualifier: "$LATEST"
       DestinationConfig:
         OnSuccess:
           Destination: !Ref SnsTopic
 
+  SlackWebhookUrlSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: ProjectCostReport/SlackWebHookUrl
+      SecretString: !Ref SlackWebhookUrl
+
 Outputs:
   Function:
     Description: "Lambda Function ARN"
-    Value: !GetAtt ProjectBlueCostsFunction.Arn
+    Value: !GetAtt ProjectCostsFunction.Arn
   FunctionIamRole:
-    Description: "Implicit IAM Role created for ProjectBlueCosts function"
-    Value: !GetAtt ProjectBlueCostsFunctionRole.Arn
+    Description: "Implicit IAM Role created for function"
+    Value: !GetAtt ProjectCostsFunctionRole.Arn

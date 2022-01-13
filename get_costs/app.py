@@ -1,5 +1,5 @@
 import os
-from project_blue_costs import get_cost_report, post_to_slack
+from project_costs import get_cost_report, post_to_slack
 
 
 def lambda_handler(event, context):

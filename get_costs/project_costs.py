@@ -1,10 +1,11 @@
-import datetime as dt
+from datetime import datetime
 import os
 
 import boto3
 import pandas as pd
 import requests
 from dateutil.relativedelta import relativedelta
+from dateutil import tz
 
 CENTRAL_COL_HEADER = 'Central'
 TENANTS_COL_HEADER = 'Tenants'
@@ -17,11 +18,11 @@ def post_to_slack(report: str):
 
 
 def get_cost_report(tenants_role: str):
-    today = dt.datetime.today()
+    today = datetime.today()
     monthly_start_date = (today - relativedelta(months=4)
                           ).replace(day=1).date().isoformat()
     weekly_start_date = (today - relativedelta(weeks=5)
-                         ).replace(day=1).date().isoformat()
+                         ).date().isoformat()
 
     monthly_params = dict(
         TimePeriod={
@@ -46,8 +47,7 @@ def get_cost_report(tenants_role: str):
     )
 
     report = f"""
-_Generated_: `{dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}`
---- 
+:money_with_wings:  :aws:  :money_with_wings:
 
 *Rolling 5 Months*
 ```
@@ -59,6 +59,7 @@ _Generated_: `{dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}`
 {get_cost_table(weekly_params, tenants_role)}
 ```
     """
+    # _Generated_: `{datetime.now().astimezone(tz.gettz('Central')).strftime("%Y-%m-%d %H:%M:%S %Z")}`
 
     return report
 
