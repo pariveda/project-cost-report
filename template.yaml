@@ -36,12 +36,18 @@ Resources:
               Effect: Allow
               Action: events:PutEvents
               Resource: arn:aws:events:us-west-2:405338390729:event-bus/default
+            - Sid: ReadSlackWebhookUrlSecret
+              Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref SlackWebhookUrlSecret
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt SnsTopic.TopicName
       Environment:
         Variables:
           TENANTS_ROLE_ARN: !Ref TenantsRoleArn
-          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          SLACK_WEBHOOK_URL_SECRET: !Ref SlackWebhookUrlSecret
       Events:
         RecurrenceEvent:
           Type: Schedule
@@ -77,7 +83,7 @@ Resources:
   SlackWebhookUrlSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: ProjectCostReport/SlackWebHookUrl
+      Name: !Sub ${AWS::StackName}-SlackWebHookUrl
       SecretString: !Ref SlackWebhookUrl
 
 Outputs:

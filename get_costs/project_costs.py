@@ -12,7 +12,10 @@ TENANTS_COL_HEADER = 'Tenants'
 
 
 def post_to_slack(report: str):
-    webhook_url = os.environ['SLACK_WEBHOOK_URL']
+    webhook_url_secret = os.environ['SLACK_WEBHOOK_URL_SECRET']
+    print('webhook_url_secret_id:', webhook_url_secret)
+    secrets_client = boto3.client('secretsmanager')
+    webhook_url = secrets_client.get_secret_value(SecretId=webhook_url_secret)['SecretString']
     data = {'text': report}
     requests.post(webhook_url, json=data)
 
