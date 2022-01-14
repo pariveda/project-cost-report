@@ -3,8 +3,7 @@ from project_costs import get_cost_report, post_to_slack
 
 
 def lambda_handler(event, context):
-    tenants_role_arn = os.environ['TENANTS_ROLE_ARN']
-    cost_report = get_cost_report(tenants_role_arn)
+    cost_report = get_cost_report()
     post_to_slack(cost_report)
 
     return {
