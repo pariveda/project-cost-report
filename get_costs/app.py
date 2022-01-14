@@ -1,16 +1,15 @@
-import os
-from project_costs import get_cost_report, post_to_slack
+import project_costs as pc
 
 
 def lambda_handler(event, context):
-    cost_report = get_cost_report()
-    post_to_slack(cost_report)
+    cost_report = pc.get_cost_report_data()
+    pc.post_to_slack(cost_report)
 
     return {
         "statusCode": 200,
-        "body": cost_report
+        "body": pc.to_json(cost_report)
     }
 
 
 if __name__ == '__main__':
-    lambda_handler(None, None)
+    print(lambda_handler(None, None))
